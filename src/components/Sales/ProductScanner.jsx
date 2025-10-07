@@ -1,84 +1,136 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
+import { supabase } from '../../lib/supabase'
 
-const ProductScanner = ({ onClose, onProductScanned, products }) => {
-  const scannerRef = useRef(null)
+const BarcodeScanner = ({ onProductFound, negocioId }) => {
   const [scanning, setScanning] = useState(false)
-  const [lastScanned, setLastScanned] = useState('')
+  const [manualCode, setManualCode] = useState('')
+  const [error, setError] = useState('')
+  const videoRef = useRef(null)
+  const streamRef = useRef(null)
 
+  // Detener cámara al desmontar
   useEffect(() => {
-    // Simulación del scanner para desarrollo
-    const handleKeyPress = (event) => {
-      if (event.key === 'Enter' && scannerRef.current) {
-        const randomProduct = products[Math.floor(Math.random() * products.length)]
-        if (randomProduct) {
-          onProductScanned(randomProduct)
-          onClose()
-        }
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyPress)
-    
     return () => {
-      window.removeEventListener('keydown', handleKeyPress)
+      stopCamera()
     }
-  }, [products, onProductScanned, onClose])
+  }, [])
 
-  const simulateScan = () => {
-    const randomProduct = products[Math.floor(Math.random() * products.length)]
-    if (randomProduct) {
-      onProductScanned(randomProduct)
-      onClose()
-    } else {
-      alert('No hay productos para escanear. Agrega productos primero.')
+  const startCamera = async () => {
+    try {
+      setError('')
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      })
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        streamRef.current = stream
+        setScanning(true)
+      }
+    } catch (err) {
+      setError('No se pudo acceder a la cámara. Usa búsqueda manual.')
+      console.error('Error accediendo a cámara:', err)
+    }
+  }
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+      streamRef.current = null
+    }
+    setScanning(false)
+  }
+
+  const searchByBarcode = async (barcode) => {
+    try {
+      const { data, error } = await supabase
+        .from('productos')
+        .select('*')
+        .eq('negocio_id', negocioId)
+        .eq('codigo_barras', barcode)
+        .eq('activo', true)
+        .single()
+
+      if (error || !data) {
+        setError('Producto no encontrado')
+        return
+      }
+
+      onProductFound(data)
+      setManualCode('')
+      stopCamera()
+    } catch (err) {
+      setError('Error buscando producto')
+      console.error(err)
+    }
+  }
+
+  const handleManualSearch = (e) => {
+    e.preventDefault()
+    if (manualCode.trim()) {
+      searchByBarcode(manualCode.trim())
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-      <div className="bg-gray-900 rounded-lg p-6 max-w-sm w-full mx-4 border border-purple-500">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-white">Escanear Código de Barras</h2>
+    <div className="bg-gray-800 rounded-lg p-4 mb-4">
+      <h3 className="text-white font-semibold mb-3">Buscar Producto</h3>
+
+      {/* Búsqueda Manual */}
+      <form onSubmit={handleManualSearch} className="mb-3">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Código de barras"
+            value={manualCode}
+            onChange={(e) => setManualCode(e.target.value)}
+            className="flex-1 px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+          />
           <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white text-xl"
+            type="submit"
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
           >
-            ✕
+            Buscar
           </button>
         </div>
-        
-        <div 
-          ref={scannerRef} 
-          className="w-full h-64 bg-gray-800 rounded-lg mb-4 overflow-hidden flex items-center justify-center border-2 border-dashed border-purple-500"
+      </form>
+
+      {/* Botón Escanear */}
+      {!scanning ? (
+        <button
+          onClick={startCamera}
+          className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
         >
-          <div className="text-center text-gray-400">
-            <div className="text-4xl mb-2">📷</div>
-            <p>Scanner de Código de Barras</p>
-            <p className="text-sm mt-2">(Para demo: presiona ENTER o el botón)</p>
-          </div>
-        </div>
-        
-        <div className="text-center space-y-3">
+          <span>📷</span>
+          <span>Escanear Código</span>
+        </button>
+      ) : (
+        <div>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="w-full rounded-lg mb-2"
+          />
           <button
-            onClick={simulateScan}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors"
+            onClick={stopCamera}
+            className="w-full py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
-            🔘 Simular Escaneo
+            Detener Cámara
           </button>
-          
-          <p className="text-sm text-gray-400">
-            Escanea un código de barras o usa el botón para simular
+          <p className="text-gray-400 text-sm mt-2 text-center">
+            Enfoca el código de barras
           </p>
-          
-          {lastScanned && (
-            <p className="text-sm bg-purple-900 text-purple-200 p-2 rounded">
-              Último código: {lastScanned}
-            </p>
-          )}
         </div>
-      </div>
+      )}
+
+      {error && (
+        <div className="mt-3 p-3 bg-red-900/50 border border-red-600 rounded-lg">
+          <p className="text-red-200 text-sm">{error}</p>
+        </div>
+      )}
     </div>
   )
 }
 
-export default ProductScanner
+export default BarcodeScanner

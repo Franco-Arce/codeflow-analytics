@@ -18,11 +18,14 @@ function App() {
   // DEBUG: Este efecto se ejecutará cuando user cambie
   useEffect(() => {
     console.log('🎯 App - User state changed:', user ? `Logged as ${user.username}` : 'No user')
-  }, [user]) // ← Dependencia en user
+    console.log('🎯 App - Full user object:', user)
+  }, [user])
 
   // Debug info
-  console.log('🏠 App State:', { 
-    user: user ? `✅ Logged as ${user.username} (${user.rol})` : '❌ No user',
+  console.log('🏠 App Render - State:', { 
+    hasUser: !!user,
+    username: user?.username,
+    rol: user?.rol,
     authMode,
     currentTab,
     isInitialized,
@@ -47,15 +50,16 @@ function App() {
     return authMode === 'login' ? (
       <Login 
         onSwitchToRegister={() => setAuthMode('register')} 
-        loading={loading}
       />
     ) : (
       <Register onSwitchToLogin={() => setAuthMode('login')} />
     )
   }
 
+  console.log('✅ App - User authenticated, showing main app')
+
   const renderCurrentScreen = () => {
-    console.log('🔄 App - Rendering screen:', currentTab)
+    console.log('📄 App - Rendering screen:', currentTab)
     
     switch (currentTab) {
       case 'sales':

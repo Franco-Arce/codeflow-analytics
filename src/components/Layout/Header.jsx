@@ -6,7 +6,7 @@ const Header = ({ user, onLogout }) => {
       <div className="max-w-md mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-xl font-bold text-white">Mi Negocio</h1>
+            <h1 className="text-xl font-bold text-white">Codeflow Analytics</h1>
             <p className="text-sm text-gray-400">
               {user.negocios?.nombre} • {user.username}
             </p>

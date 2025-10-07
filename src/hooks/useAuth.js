@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { loginUser } from '../lib/supabase'
 
 export const useAuth = () => {
@@ -6,9 +6,10 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
 
+  // Cargar usuario al inicio
   useEffect(() => {
     const savedUser = localStorage.getItem('codeflow_user')
-    console.log('🔄 useAuth - Checking saved user:', savedUser)
+    console.log('📄 useAuth - Checking saved user:', savedUser)
     
     if (savedUser) {
       try {
@@ -24,21 +25,21 @@ export const useAuth = () => {
     setIsInitialized(true)
   }, [])
 
-  const login = async (username, pin) => {
+  const login = useCallback(async (username, pin) => {
     console.log('🔐 useAuth - Starting login process...')
     setLoading(true)
+    
     try {
       const userData = await loginUser(username, pin)
-      console.log('✅ useAuth - Login successful, setting user:', userData)
+      console.log('✅ useAuth - Login successful:', userData)
       
-      // Asegurar que la actualización se procese
-      await new Promise(resolve => {
-        setUser(userData)
-        setTimeout(resolve, 0) // Forzar ciclo de actualización
-      })
-      
+      // Guardar en localStorage
       localStorage.setItem('codeflow_user', JSON.stringify(userData))
       console.log('💾 useAuth - User saved to localStorage')
+      
+      // Actualizar estado inmediatamente (sin setTimeout)
+      setUser(userData)
+      console.log('✅ useAuth - User state updated')
       
       return { success: true, user: userData }
     } catch (error) {
@@ -46,15 +47,14 @@ export const useAuth = () => {
       return { success: false, error: error.message }
     } finally {
       setLoading(false)
-      console.log('⚡ useAuth - Loading state set to false')
     }
-  }
+  }, [])
 
-  const logout = () => {
+  const logout = useCallback(() => {
     console.log('🚪 useAuth - Logging out...')
     setUser(null)
     localStorage.removeItem('codeflow_user')
-  }
+  }, [])
 
   return { 
     user, 

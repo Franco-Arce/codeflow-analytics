@@ -29,7 +29,7 @@ export const getNegocioByCodigo = async (codigo) => {
   console.log('🔍 Buscando negocio con código:', codigo)
   
   const { data, error } = await supabase
-    .from('negocios')
+    .from('businesses')  // ← CAMBIADO: 'negocios' → 'businesses'
     .select('*')
     .eq('codigo', codigo)
     .single()
@@ -48,14 +48,14 @@ export const registerUser = async (username, pin, negocioId, rol = 'empleado') =
   console.log('👤 Registrando usuario:', { username, negocioId, rol })
   
   const { data, error } = await supabase
-    .from('usuarios')
+    .from('users')  // ← CAMBIADO: 'usuarios' → 'users'
     .insert([
       { 
         username, 
         pin, 
         negocio_id: negocioId, 
         rol,
-        activo: true
+        active: true  // ← CAMBIADO: 'activo' → 'active'
       }
     ])
     .select()
@@ -77,17 +77,15 @@ export const loginUser = async (username, pin) => {
   const startTime = Date.now()
   
   try {
-    // QUITA el .single() y maneja el array de resultados
     const { data, error } = await supabase
-      .from('usuarios')
+      .from('users')  // ← CAMBIADO: 'usuarios' → 'users'
       .select(`
         *,
-        negocios (*)
+        businesses (*)  // ← CAMBIADO: 'negocios' → 'businesses'
       `)
       .eq('username', username)
       .eq('pin', pin)
-      .eq('activo', true)
-    // ← .single() QUITADO
+      .eq('active', true)  // ← CAMBIADO: 'activo' → 'active'
 
     const endTime = Date.now()
     console.log(`⏱️ Tiempo de login: ${endTime - startTime}ms`)
